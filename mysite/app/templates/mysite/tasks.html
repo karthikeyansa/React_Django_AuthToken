@@ -1,0 +1,44 @@
+<html>
+    <head>
+        <title>Tasks</title>
+        <style>
+            table, th, td {
+                border: 1px solid black;
+                padding-block: 1px;
+            }
+        </style>
+    </head>
+    <body><br>
+        <a href="{% url 'logout' %}">logout</a><br><br><br>
+        <h3>Add a Task</h3>
+        <form action="{% url 'addTask' %}" method="POST">
+           TaskName<input type="text" name="taskname" required/><br><br><br>
+           TaskDetail<textarea name="taskdetail" aria-setsize="4" required></textarea><br><br><br>
+            <input type="submit" name="submit" value="submit">
+        </form>
+        {% if tasks %}
+        <table style="width:100%">
+            <tr>
+              <th>TaskName</th>
+              <th>TaskDetail</th> 
+              <th>Status</th>
+              <th>Added On</th>
+            </tr>
+            {% for task in tasks %}
+            <tr>
+              <td>{{ task.taskName }}</td>
+              <td>{{ task.taskDetails }}</td>
+              {% if task.completed == False %}
+              <td><a href="{% url 'completedTask' task.id %}" title="Add to completed task">Incomplete</a></td>
+              {% else %}
+              <td><a href="{% url 'deleteTask' task.id %}" title="Delete this task">completed</a></td>
+              {% endif %}
+              <td>{{ task.timeStamp }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <h3>No Tasks</h3>
+        {% endif %}
+    </body>
+</html>
