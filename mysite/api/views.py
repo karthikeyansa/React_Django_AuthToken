@@ -1,7 +1,9 @@
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
-from .models import Tasks,User
+from django.contrib.auth.models import User
+from app.models import Tasks
+
 # Create your views here.
 #rest_framework
 from rest_framework.parsers import JSONParser
