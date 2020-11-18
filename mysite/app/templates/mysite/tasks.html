@@ -9,6 +9,15 @@
         </style>
     </head>
     <body><br>
+    {% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+       <strong {% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %} >
+           {{ message }}</strong><br><br>
+    {% endfor %}
+</ul>
+{% endif %}
+    <br>
         <a href="{% url 'logout' %}">logout</a><br><br><br>
         <h3>Add a Task</h3>
         <form action="{% url 'addTask' %}" method="POST">
