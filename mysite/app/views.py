@@ -1,53 +1,57 @@
-from django.shortcuts import render,redirect
-from django.contrib.auth import authenticate,logout as logO,login as logG
+from django.shortcuts import render,HttpResponse,get_list_or_404
+from .serializers import UserSerializer, TodoSerializer
+from .models import Todo
 from django.contrib.auth.models import User
-from django.contrib import messages
-from django.views.decorators.csrf import csrf_exempt
+
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated,AllowAny
 
 # Create your views here.
-from .models import Tasks
-@csrf_exempt
-def login(request):
-    if request.method == 'POST':
-        user = authenticate(username = request.POST['username'],password = request.POST['password'])
-        logG(request,user)
-        return redirect(tasks)
-    return render(request,'mysite/index.html')
 
-def tasks(request):
-    tasks = Tasks.objects.filter(owner = request.user)
-    return render(request,'mysite/tasks.html',{'tasks':tasks})
+class UserViewset(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (AllowAny,)
 
-@csrf_exempt
-def register(request):
-    if request.method == 'POST':
-        User.objects.create_user(username = request.POST['username'],password = request.POST['password'])
-        messages.add_message(request, messages.SUCCESS, 'User created successfully')
-        return redirect(login)
-    return redirect(register)
+class TodoViewset(viewsets.ModelViewSet):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+    authentication_classes = (TokenAuthentication, )
+    permission_classes = (IsAuthenticated,)
 
-@csrf_exempt
-def addTask(request):
-    if request.method == 'POST':
-        Tasks(taskName=request.POST['taskname'],taskDetails=request.POST['taskdetail'],owner=request.user).save()
-        messages.add_message(request, messages.SUCCESS, 'Task added successfully')
-        return redirect(tasks)
-    return redirect(tasks)
 
-@csrf_exempt
-def deleteTask(request,id):
-    Tasks.objects.get(pk = id).delete()
-    messages.add_message(request, messages.SUCCESS, 'Task Deleted successfully')
-    return redirect(tasks)
+    @action(detail=True, methods=['PUT'])
+    def completed(self, request, pk=None):
+        try:
+            todo = Todo.objects.get(id = pk,owner = request.user)
+            todo.completed = True
+            todo.save()
+            serializer = TodoSerializer(todo, many=False)
+            response = {'message': 'task updated', 'result': serializer.data}
+            return Response(response, status=status.HTTP_200_OK)
+        except:
+            response = {'message': 'Todo item missing'}
+            return Response(response, status=status.HTTP_404_NOT_FOUND)
 
-def completedTask(request,id):
-    task = Tasks.objects.get(pk = id)
-    task.completed = True
-    task.save()
-    messages.add_message(request, messages.SUCCESS, 'Task %s Completed successfully'%task.taskName)
-    return redirect(tasks)
+    def create(self, request, *args, **kwargs):
+        if 'name' and 'desc' in request.data:
+            todo = Todo.objects.create(name = request.data['name'],desc = request.data['desc'],owner = request.user)
+            serializer = TodoSerializer(todo, many=False)
+            response = {'message': 'task created', 'result': serializer.data}
+            return Response(response, status=status.HTTP_200_OK)
 
-def logout(request):
-    logO(request)
-    messages.add_message(request, messages.SUCCESS, 'Logged Out')
-    return redirect(login)
+    @action(detail = True,methods=['GET'])
+    def myList(self, request,pk = None):
+        todos = Todo.objects.filter(owner = request.user)
+        serializer = TodoSerializer(todos, many=True)
+        response = {'message': 'task Found', 'result': serializer.data}
+        return Response(response, status=status.HTTP_200_OK)
+
+    def destroy(self, request,pk=None, *args, **kwargs):
+        Todo.objects.get(id=pk).delete()
+        response = {'message': 'task deleted'}
+        return Response(response, status=status.HTTP_200_OK)
